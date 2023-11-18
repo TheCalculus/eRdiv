@@ -1,76 +1,100 @@
-#include <SFML/Audio.h>
 #include <SFML/Graphics.h>
+#include <SFML/OpenGL.h>
+#include <SFML/System/Clock.h>
+#include <SFML/System/Types.h>
+#include <SFML/Window/Event.h>
+#include <SFML/Window/Window.h>
+#include <stdint.h>
+#include <stdio.h>
 
-int main()
-{
+int main() {
     sfVideoMode mode = {800, 600, 32};
-    sfRenderWindow* window;
-    sfTexture* texture;
-    sfSprite* sprite;
-    sfFont* font;
-    sfText* text;
-    sfMusic* music;
-    sfEvent event;
 
-    /* Create the main window */
-    window = sfRenderWindow_create(mode, "SFML window", sfResize | sfClose, NULL);
-    if (!window)
-        return -1;
+    sfContextSettings settings;
 
-    /* Load a sprite to display */
-    texture = sfTexture_createFromFile("cute_image.jpg", NULL);
-    if (!texture)
-        return -1;
-    sprite = sfSprite_create();
-    sfSprite_setTexture(sprite, texture, sfTrue);
+    settings.depthBits         = 24;
+    settings.stencilBits       = 8;
+    settings.antialiasingLevel = 4;
+    settings.majorVersion      = 3;
+    settings.minorVersion      = 0;
 
-    /* Create a graphical text to display */
-    font = sfFont_createFromFile("arial.ttf");
-    if (!font)
-        return -1;
-    text = sfText_create();
-    sfText_setString(text, "Hello SFML");
-    sfText_setFont(text, font);
-    sfText_setCharacterSize(text, 50);
+    sfRenderWindow* window = sfRenderWindow_create(mode, "eRdiv", sfResize | sfClose, &settings);
+    sfClock*        clock  = sfClock_create();
 
-    /* Load a music to play */
-    music = sfMusic_createFromFile("nice_music.ogg");
-    if (!music)
-        return -1;
+    double angle = 0;
 
-    /* Play the music */
-    sfMusic_play(music);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(90.f, 1.f, 1.f, 300.0f);
 
-    /* Start the game loop */
-    while (sfRenderWindow_isOpen(window))
-    {
-        /* Process events */
-        while (sfRenderWindow_pollEvent(window, &event))
-        {
-            /* Close window : exit */
-            if (event.type == sfEvtClosed)
-            sfRenderWindow_close(window);
+    while (sfRenderWindow_isOpen(window)) {
+        sfEvent event;
+
+        while (sfRenderWindow_pollEvent(window, &event)) {
+            if (event.type == sfEvtClosed) {
+                // close window
+                sfRenderWindow_close(window);
+            }
+            else if
+                (event.type == sfEvtResized) {
+                    // adjust viewport on resize
+                    glViewport(0, 0, event.size.width, event.size.height);
+                }
         }
 
-        /* Clear the screen */
-        sfRenderWindow_clear(window, sfBlack);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        /* Draw the sprite */
-        sfRenderWindow_drawSprite(window, sprite, NULL);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glTranslatef(0.f, 0.f, -200.f);
 
-        /* Draw the text */
-        sfRenderWindow_drawText(window, text, NULL);
+        angle = sfClock_getElapsedTime(clock).microseconds * 1e-6;
 
-        /* Update the window */
+        glRotatef(angle * 50, 1.f, 0.f, 0.f);
+        glRotatef(angle * 30, 0.f, 1.f, 0.f);
+        glRotatef(angle * 90, 0.f, 0.f, 1.f);
+
+glBegin(GL_QUADS);
+        glColor3f(0,1,1); //cyan
+        glVertex3f(-50.f, -50.f, -50.f);
+        glVertex3f(-50.f,  50.f, -50.f);
+        glVertex3f( 50.f,  50.f, -50.f);
+        glVertex3f( 50.f, -50.f, -50.f);
+
+        glColor3f(0,0,1); //blue
+        glVertex3f( 50.f, -50.f, 50.f);
+        glVertex3f( 50.f,  50.f, 50.f);
+        glVertex3f(-50.f,  50.f, 50.f);
+        glVertex3f(-50.f, -50.f, 50.f);
+
+        glColor3f(1,0,1); //magenta
+        glVertex3f(-50.f, -50.f,  50.f);
+        glVertex3f(-50.f,  50.f,  50.f);
+        glVertex3f(-50.f,  50.f, -50.f);
+        glVertex3f(-50.f, -50.f, -50.f);
+
+        glColor3f(0,1,0); //green
+        glVertex3f(50.f, -50.f, -50.f);
+        glVertex3f(50.f,  50.f, -50.f);
+        glVertex3f(50.f,  50.f,  50.f);
+        glVertex3f(50.f, -50.f,  50.f);
+
+        glColor3f(1,1,0); //yellow
+        glVertex3f(-50.f, -50.f,  50.f);
+        glVertex3f(-50.f, -50.f, -50.f);
+        glVertex3f( 50.f, -50.f, -50.f);
+        glVertex3f( 50.f, -50.f,  50.f);
+
+        glColor3f(1,0,0); //red
+        glVertex3f( 50.f, 50.f,  50.f);
+        glVertex3f( 50.f, 50.f, -50.f);
+        glVertex3f(-50.f, 50.f, -50.f);
+        glVertex3f(-50.f, 50.f,  50.f);
+glEnd();
+
         sfRenderWindow_display(window);
     }
 
-    /* Cleanup resources */
-    sfMusic_destroy(music);
-    sfText_destroy(text);
-    sfFont_destroy(font);
-    sfSprite_destroy(sprite);
-    sfTexture_destroy(texture);
     sfRenderWindow_destroy(window);
 
     return 0;
