@@ -4,18 +4,20 @@
 #include <GLES3/gl3.h>
 
 #include <stdbool.h>
+#include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #define WIDTH  800
-#define HEIGHT 600
+#define HEIGHT 800
 
 int main() {
-    sfWindow* window = sfWindow_create((sfVideoMode){ HEIGHT, WIDTH, 32 }, "SFML OpenGL", sfTitlebar | sfResize | sfClose, NULL);
+    sfWindow* window = sfWindow_create((sfVideoMode){ WIDTH, HEIGHT, 32 }, "SFML OpenGL", sfTitlebar | sfResize | sfClose, NULL);
     
     sfWindow_setVerticalSyncEnabled(window, false);
     sfWindow_setActive(window, true);
 
-    glViewport(0, 0, WIDTH, HEIGHT);
+    glViewport(100, 100, WIDTH, HEIGHT);
  
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,
@@ -47,8 +49,11 @@ int main() {
         "#version 330 core\n"
         "out vec4 FragColor;\n"
         "void main()\n"
-        "{\n"
-        "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+        "{\n" // 0.15f, 0.13f, 0.32f
+        "   float red   = gl_FragCoord.x / 800;\n"
+        "   float green = gl_FragCoord.y / 800;\n"
+        "   float blue  = 0;\n"
+        "   FragColor = vec4(red, green, blue, 1.0f);\n"
         "}\0";
 
     GLuint fragmentShader;
@@ -64,8 +69,11 @@ int main() {
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
 
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
     glUseProgram(shaderProgram);
-   
+
     while (sfWindow_isOpen(window)) {
         sfEvent event;
 
@@ -80,6 +88,9 @@ int main() {
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
         sfWindow_display(window);
     }
     
