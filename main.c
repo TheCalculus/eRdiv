@@ -27,10 +27,10 @@ int main() {
 
     if (glewInit() != GLEW_OK) { ERR("glewInit"); return -1; }
 
-    GLuint varrid;
+    GLuint vao;
 
-    glGenVertexArrays(1, &varrid);
-    glBindVertexArray(varrid);
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
     static const GLfloat g_vertex_buffer_data[] = {
         -1.0f, -1.0f, 0.0f,
@@ -38,22 +38,41 @@ int main() {
          0.0f,  1.0f, 0.0f,
     };
 
-    GLuint vertexbuffer;
+    GLuint vbo;
 
-    glGenBuffers(1, &vertexbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW); 
 
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
     GLuint programID = loadShaders("shader/vertex.vertexshader", "shader/fragment.fragmentshader");
 
+    mat4x4 proj;
+    mat4x4_perspective(proj, 1.5f, 4.0f / 3.0f, 0.1f, 100.0f);
+
+    mat4x4 view;
+    mat4x4_look_at(view, (vec3) { 4, 3, 3 }, (vec3) { 0, 0, 0 }, (vec3) { 0, 1, 0});
+
+    mat4x4 model;
+    mat4x4_identity(model);
+
+    // mvp = proj * view * model
+
+    mat4x4 mvp;
+    mat4x4_mul(mvp, proj, view);
+    mat4x4_mul(mvp, mvp, model);
+
+    GLuint matrixID = glGetUniformLocation(programID, "mvp");
+
     do {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(programID);
 
+        glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvp[0][0]);
+
         glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexAttribPointer(
                 0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
                 3,                  // size
