@@ -1,111 +1,75 @@
-#include <SFML/Graphics.h>
-#include <SFML/OpenGL.h>
-#include <SFML/System/Clock.h>
-#include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#define WINDOW_HEIGHT 800
-#define WINDOW_WIDTH  600
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
-void drawCube() {
-    glBegin(GL_QUADS);
-    // Front face
-    glColor3f(1.0f, 0.0f, 0.0f);  // Red
-    glVertex3f(-50.0f, -50.0f, 50.0f);
-    glVertex3f(50.0f, -50.0f, 50.0f);
-    glVertex3f(50.0f, 50.0f, 50.0f);
-    glVertex3f(-50.0f, 50.0f, 50.0f);
+#include "shaders.h"
+#include "linmath.h"
 
-    // Back face
-    glColor3f(0.0f, 1.0f, 0.0f);  // Green
-    glVertex3f(-50.0f, -50.0f, -50.0f);
-    glVertex3f(50.0f, -50.0f, -50.0f);
-    glVertex3f(50.0f, 50.0f, -50.0f);
-    glVertex3f(-50.0f, 50.0f, -50.0f);
-
-    // Top face
-    glColor3f(0.0f, 0.0f, 1.0f);  // Blue
-    glVertex3f(-50.0f, 50.0f, 50.0f);
-    glVertex3f(50.0f, 50.0f, 50.0f);
-    glVertex3f(50.0f, 50.0f, -50.0f);
-    glVertex3f(-50.0f, 50.0f, -50.0f);
-
-    // Bottom face
-    glColor3f(1.0f, 1.0f, 0.0f);  // Yellow
-    glVertex3f(-50.0f, -50.0f, 50.0f);
-    glVertex3f(50.0f, -50.0f, 50.0f);
-    glVertex3f(50.0f, -50.0f, -50.0f);
-    glVertex3f(-50.0f, -50.0f, -50.0f);
-
-    // Right face
-    glColor3f(1.0f, 0.0f, 1.0f);  // Magenta
-    glVertex3f(50.0f, -50.0f, 50.0f);
-    glVertex3f(50.0f, 50.0f, 50.0f);
-    glVertex3f(50.0f, 50.0f, -50.0f);
-    glVertex3f(50.0f, -50.0f, -50.0f);
-
-    // Left face
-    glColor3f(0.0f, 1.0f, 1.0f);  // Cyan
-    glVertex3f(-50.0f, -50.0f, 50.0f);
-    glVertex3f(-50.0f, 50.0f, 50.0f);
-    glVertex3f(-50.0f, 50.0f, -50.0f);
-    glVertex3f(-50.0f, -50.0f, -50.0f);
-
-    glEnd();
-}
+#define ERR(msg) { fprintf(stderr, msg); }
 
 int main() {
-    sfVideoMode mode = {WINDOW_HEIGHT, WINDOW_WIDTH, 32};
+    glewExperimental = true;
+    if (!glfwInit()) { ERR("glfwInit"); return -1; };
 
-    sfContextSettings settings;
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // opengl 3.3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    settings.depthBits         = 24;
-    settings.stencilBits       = 8;
-    settings.antialiasingLevel = 4;
-    settings.majorVersion      = 3;
-    settings.minorVersion      = 0;
+    GLFWwindow* window = glfwCreateWindow(1024, 768, "GLFW, GLEW, OpenGL", NULL, NULL);
+    if (window == NULL) { ERR("createWindow"); glfwTerminate(); return -1; }
 
-    sfRenderWindow* window = sfRenderWindow_create(mode, "eRdiv", sfResize | sfClose, &settings);
-    sfClock*        clock  = sfClock_create();
+    glfwMakeContextCurrent(window);
 
-    double angle = 0;
+    if (glewInit() != GLEW_OK) { ERR("glewInit"); return -1; }
 
-    glEnable(GL_DEPTH_TEST);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(90.f, 1.f, 1.f, 300.0f);
+    GLuint varrid;
 
-    while (sfRenderWindow_isOpen(window)) {
-        sfEvent event;
+    glGenVertexArrays(1, &varrid);
+    glBindVertexArray(varrid);
 
-        while (sfRenderWindow_pollEvent(window, &event)) {
-            if (event.type == sfEvtClosed) {
-                // close window
-                sfRenderWindow_close(window);
-            }
-            else if
-                (event.type == sfEvtResized) {
-                    // adjust viewport on resize
-                    glViewport(0, 0, event.size.width, event.size.height);
-                }
-        }
+    static const GLfloat g_vertex_buffer_data[] = {
+        -1.0f, -1.0f, 0.0f,
+         1.0f, -1.0f, 0.0f,
+         0.0f,  1.0f, 0.0f,
+    };
 
+    GLuint vertexbuffer;
+
+    glGenBuffers(1, &vertexbuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW); 
+
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+
+    GLuint programID = loadShaders("shader/vertex.vertexshader", "shader/fragment.fragmentshader");
+
+    do {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glUseProgram(programID);
 
-        angle = sfClock_getElapsedTime(clock).microseconds * 1e-6;
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+        glVertexAttribPointer(
+                0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+                3,                  // size
+                GL_FLOAT,           // type
+                GL_FALSE,           // normalized?
+                0,                  // stride
+                (void*)0            // array buffer offset
+                );
 
-        glLoadIdentity();
-        glTranslatef(0.f, 0.f, -150.f);
-        glRotatef(angle * 50, 1.f, 0.f, 0.f);
-        glRotatef(angle * 30, 0.f, 1.f, 0.f);
-        glRotatef(angle * 90, 0.f, 0.f, 1.f);
-       
-        drawCube();
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDisableVertexAttribArray(0);
 
-        sfRenderWindow_display(window);
-    }
-
-    sfRenderWindow_destroy(window);
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    } while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
+           glfwWindowShouldClose(window) == 0);
 
     return 0;
 }
